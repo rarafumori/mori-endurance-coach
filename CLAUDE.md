@@ -5,7 +5,7 @@ Het vertelt jou (Claude) hoe je deze repository moet gebruiken om Ralph wekelijk
 
 ## Project doel
 
-Wekelijkse marathon training coaching voor Ralph van Rooij.
+Wekelijkse marathon training coaching voor Ralph Bos.
 Cork Marathon 2026 (31 mei). Tijddoel: uitlopen, sub-4 als stretch.
 
 ## Hoe je werkt: de vaste flow
