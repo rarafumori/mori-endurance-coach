@@ -1,0 +1,23 @@
+[
+  {
+    "date_iso": "2026-04-21",
+    "title": "W17 8KM Easy Run",
+    "sport": "Run",
+    "description": "- 8km Z2 Pace",
+    "external_id": "coach_2026-04-21_7867048f727c"
+  },
+  {
+    "date_iso": "2026-04-23",
+    "title": "W17 4x 2KM Tempo",
+    "sport": "Run",
+    "description": "Warmup\n- 2km Z2 Pace\n\nMain set 4x\n- 2km Z3 Pace\n- 90s Z2 Pace\n\nCooldown\n- 1km Z2 Pace",
+    "external_id": "coach_2026-04-23_e826b0e91e1d"
+  },
+  {
+    "date_iso": "2026-04-25",
+    "title": "W17 30KM Long Run",
+    "sport": "Run",
+    "description": "Warmup\n- 3km Z2 Pace\n\nMain\n- 25km Z2 Pace\n\nCooldown\n- 2km Z2 Pace",
+    "external_id": "coach_2026-04-25_318a1d9ac477"
+  }
+]

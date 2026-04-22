@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python src/*.py*)",
+      "Bash(python -m src.*)",
+      "Bash(pip install *)",
+      "Bash(git *)",
+      "Read(data/**)",
+      "Read(config/.env)",
+      "Edit(data/plans/**)",
+      "Edit(COACH.md)"
+    ],
+    "deny": [
+      "Bash(curl *)",
+      "Bash(rm -rf *)"
+    ]
+  },
+  "description": "Wekelijkse training planning voor Cork Marathon via intervals.icu API."
+}
