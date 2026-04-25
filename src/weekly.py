@@ -17,7 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from .extractor import (
@@ -40,6 +40,26 @@ PLANS_DIR    = PROJECT_ROOT / "data" / "plans"
 def cache_path(name: str) -> Path:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     return CACHE_DIR / name
+
+
+def cleanup_old_cache(max_age_days: int = 30):
+    """Verwijder cache bestanden ouder dan max_age_days."""
+    cutoff = date.today() - timedelta(days=max_age_days)
+    removed = []
+    for pattern in ("activities_*.json", "summary_*.json"):
+        for f in CACHE_DIR.glob(pattern):
+            date_str = f.stem.split("_", 1)[-1]
+            try:
+                file_date = date.fromisoformat(date_str)
+            except ValueError:
+                continue
+            if file_date < cutoff:
+                f.unlink()
+                removed.append(f.name)
+    if removed:
+        print(f"Cache opgeruimd ({len(removed)} bestanden ouder dan {max_age_days} dagen):", file=sys.stderr)
+        for name in removed:
+            print(f"  {name}", file=sys.stderr)
 
 
 # ============================================================
@@ -74,6 +94,7 @@ def cmd_analyze(client: IntervalsClient, days: int = 21, save_cache: bool = True
         print(f"Cache saved:", file=sys.stderr)
         print(f"  {activities_json}", file=sys.stderr)
         print(f"  {summary_json}", file=sys.stderr)
+        cleanup_old_cache()
 
     # Toon markdown rapport op stdout (voor Claude Code chat)
     print(to_markdown_report(activities))
