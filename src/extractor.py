@@ -138,6 +138,14 @@ class Activity:
     def is_run(self) -> bool:
         return self.type in RUN_TYPES
 
+    @property
+    def is_ride(self) -> bool:
+        return self.type in RIDE_TYPES
+
+    @property
+    def is_strength(self) -> bool:
+        return self.type in STRENGTH_TYPES
+
 
 # ============================================================
 # API CLIENT
@@ -386,7 +394,7 @@ def collect_activities(client: IntervalsClient, days: int = 21) -> list:
         if raw.get("type") not in RELEVANT_TYPES:
             continue
         intervals_data = None
-        if raw.get("type") in RUN_TYPES:
+        if raw.get("type") in RUN_TYPES | RIDE_TYPES:
             intervals_data = client.get_activity_intervals(str(raw.get("id", "")))
         activities.append(parse_activity(raw, wellness, intervals_data))
 
