@@ -14,6 +14,7 @@ Dry-run mode toont wat er gepusht zou worden zonder daadwerkelijke API call.
 
 from __future__ import annotations
 
+import os
 import sys
 import json
 from datetime import date, timedelta
@@ -165,6 +166,9 @@ def main():
         workouts = [Workout(**w) for w in data]
         result = pusher.push(workouts, dry_run=args.dry_run)
         print(json.dumps(result, indent=2, default=str))
+        if not args.dry_run and result.get("created", 0) > 0:
+            os.unlink(args.from_json)
+            print(f"Plan verwijderd: {args.from_json}", file=sys.stderr)
         return
 
     parser.print_help()

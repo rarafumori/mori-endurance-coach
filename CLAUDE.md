@@ -56,20 +56,24 @@ Cooldown
 
 ## Push flow
 
-### Dry-run eerst
+### 1. Analyze
+```
+python -m src.weekly --analyze
+```
 
+### 2. Genereer workouts → sla op als `data/plans/W##.json`
+
+### 3. Review (dry-run)
 ```
 python -m src.pusher --dry-run --from-json data/plans/W##.json
 ```
 
-### Echte push na bevestiging
-
+### 4. Push na goedkeuring
 ```
 python -m src.pusher --from-json data/plans/W##.json
 ```
 
 ### Check upcoming
-
 ```
 python -m src.weekly --upcoming
 ```

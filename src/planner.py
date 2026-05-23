@@ -14,6 +14,8 @@ Die gebeurt in Claude Code chat. Dit bestand levert alleen bouwstenen.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field, asdict
 from datetime import date, datetime, timedelta
 from typing import Optional
@@ -41,8 +43,6 @@ class Workout:
 
     def __post_init__(self):
         if not self.external_id:
-            # Stabiele ID: datum + titel hash
-            import hashlib
             h = hashlib.md5(f"{self.date_iso}_{self.title}".encode()).hexdigest()[:12]
             self.external_id = f"coach_{self.date_iso}_{h}"
 
@@ -309,7 +309,6 @@ def format_week_plan(workouts: list) -> str:
 
 def workouts_to_json(workouts: list) -> str:
     """JSON export van een hele week."""
-    import json
     return json.dumps(
         [asdict(w) for w in workouts],
         indent=2, ensure_ascii=False, default=str,

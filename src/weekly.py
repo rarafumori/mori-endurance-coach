@@ -8,63 +8,35 @@ Gebruikt als:
   python -m src.weekly --test-connection  # Test API credentials
   python -m src.weekly --upcoming         # Toon geplande workouts
 
-Voor Claude Code: roep --analyze aan, krijg JSON + markdown rapport,
-verwerk in chat, genereer workouts, roep dan pusher aan.
+Flow:
+  1. --analyze              → markdown rapport in chat
+  2. (Claude Code chat)     → genereer workouts, sla op als data/plans/W##.json
+  3. --dry-run --from-json  → review voor push
+  4. --from-json            → echte push
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
-from datetime import date, timedelta
 from pathlib import Path
 
-from .extractor import (
-    IntervalsClient, load_credentials, collect_activities,
-    activities_to_dict,
-)
-from .analyzer import summarize, to_markdown_report
+from .extractor import IntervalsClient, load_credentials, collect_activities
+from .analyzer import to_markdown_report
 from .pusher import WorkoutPusher
 from .planner import next_week_dates
 
-
-# ============================================================
-# Paden
-# ============================================================
-PROJECT_ROOT = Path(__file__).parent.parent
-CACHE_DIR    = PROJECT_ROOT / "data" / "cache"
-PLANS_DIR    = PROJECT_ROOT / "data" / "plans"
+PLANS_DIR = Path(__file__).parent.parent / "data" / "plans"
 
 
-def cache_path(name: str) -> Path:
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    return CACHE_DIR / name
-
-
-def cleanup_old_cache(max_age_days: int = 30):
-    """Verwijder cache bestanden ouder dan max_age_days."""
-    cutoff = date.today() - timedelta(days=max_age_days)
-    removed = []
-    for pattern in ("activities_*.json", "summary_*.json"):
-        for f in CACHE_DIR.glob(pattern):
-            date_str = f.stem.split("_", 1)[-1]
-            try:
-                file_date = date.fromisoformat(date_str)
-            except ValueError:
-                continue
-            if file_date < cutoff:
-                f.unlink()
-                removed.append(f.name)
+def _clean_plans():
+    removed = [f for f in PLANS_DIR.glob("*.json")]
+    for f in removed:
+        f.unlink()
     if removed:
-        print(f"Cache opgeruimd ({len(removed)} bestanden ouder dan {max_age_days} dagen):", file=sys.stderr)
-        for name in removed:
-            print(f"  {name}", file=sys.stderr)
+        print(f"Plans opgeruimd: {len(removed)} bestand(en)", file=sys.stderr)
 
 
-# ============================================================
-# Commands
-# ============================================================
 def cmd_test_connection(client: IntervalsClient):
     """Check of API werkt met huidige credentials."""
     try:
@@ -79,27 +51,13 @@ def cmd_test_connection(client: IntervalsClient):
         return False
 
 
-def cmd_analyze(client: IntervalsClient, days: int = 21, save_cache: bool = True):
-    """Haal data op, analyseer, toon markdown rapport + cache JSON."""
+def cmd_analyze(client: IntervalsClient, days: int = 21):
+    """Haal data op, analyseer, toon markdown rapport. Ruimt oude plans op."""
+    _clean_plans()
     activities = collect_activities(client, days=days)
 
-    if save_cache:
-        today_iso = date.today().isoformat()
-        activities_json = cache_path(f"activities_{today_iso}.json")
-        summary_json    = cache_path(f"summary_{today_iso}.json")
-        with open(activities_json, "w", encoding="utf-8") as f:
-            json.dump(activities_to_dict(activities), f, indent=2, default=str, ensure_ascii=False)
-        with open(summary_json, "w", encoding="utf-8") as f:
-            json.dump(summarize(activities), f, indent=2, default=str, ensure_ascii=False)
-        print(f"Cache saved:", file=sys.stderr)
-        print(f"  {activities_json}", file=sys.stderr)
-        print(f"  {summary_json}", file=sys.stderr)
-        cleanup_old_cache()
-
-    # Toon markdown rapport op stdout (voor Claude Code chat)
     print(to_markdown_report(activities))
 
-    # Toon ook volgende week context
     nw = next_week_dates()
     print(f"\n## Volgende week: {nw['week_label']}")
     print(f"Maandag: {nw['ma'].strftime('%d %b')}  Zondag: {nw['zo'].strftime('%d %b')}")
@@ -133,20 +91,6 @@ def cmd_upcoming(client: IntervalsClient):
         print(f"  {dag} {start}  [{cat}]  {name} {('(' + src + ')') if src else ''}")
 
 
-def cmd_last_cache():
-    """Toon waar de laatste cache staat (voor Claude Code)."""
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    files = sorted(CACHE_DIR.glob("summary_*.json"))
-    if not files:
-        print("Geen cache gevonden. Run eerst: python -m src.weekly --analyze")
-        return
-    latest = files[-1]
-    print(f"Laatste cache: {latest}")
-    with open(latest) as f:
-        data = json.load(f)
-    print(json.dumps(data, indent=2, default=str, ensure_ascii=False))
-
-
 # ============================================================
 # MAIN
 # ============================================================
@@ -155,19 +99,18 @@ def main():
         description="Wekelijkse trainingscoach orchestrator",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Typische flow:
-  1. python -m src.weekly --test-connection    # eenmalig na installatie
-  2. python -m src.weekly --analyze            # zondag; cache en rapport
-  3. (Claude Code chat) -> genereert workouts
-  4. python -m src.pusher --dry-run --from-json data/plans/W18.json
-  5. python -m src.pusher --from-json data/plans/W18.json  # echte push
-  6. python -m src.weekly --upcoming           # check resultaat
+Flow:
+  1. python -m src.weekly --test-connection
+  2. python -m src.weekly --analyze
+  3. (Claude Code chat) -> genereer workouts -> data/plans/W##.json
+  4. python -m src.pusher --dry-run --from-json data/plans/W##.json
+  5. python -m src.pusher --from-json data/plans/W##.json
+  6. python -m src.weekly --upcoming
 """,
     )
     parser.add_argument("--test-connection", action="store_true")
     parser.add_argument("--analyze", action="store_true")
     parser.add_argument("--upcoming", action="store_true")
-    parser.add_argument("--last-cache", action="store_true")
     parser.add_argument("--days", type=int, default=21)
     args = parser.parse_args()
 
@@ -184,10 +127,6 @@ Typische flow:
 
     if args.upcoming:
         cmd_upcoming(client)
-        return
-
-    if args.last_cache:
-        cmd_last_cache()
         return
 
     parser.print_help()
